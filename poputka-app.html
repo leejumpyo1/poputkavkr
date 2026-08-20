@@ -398,10 +398,118 @@
   .empty{
     text-align:center; padding:60px 30px; color:var(--ink-soft); font-size:13px;
   }
+  /* ---- Onboarding: role select ---- */
+  .onboarding{
+    position:absolute; inset:0; z-index:100;
+    background:var(--surface);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:32px 28px;
+    text-align:center;
+  }
+  .onboarding-logo{
+    width:64px;height:64px;border-radius:18px;
+    background:var(--blue); display:flex;align-items:center;justify-content:center;
+    margin-bottom:20px;
+  }
+  .onboarding-logo::after{
+    content:""; width:26px;height:26px;border-radius:7px; background:#fff;
+  }
+  .onboarding-title{font-weight:800; font-size:22px; letter-spacing:-.4px;}
+  .onboarding-sub{font-size:14px; color:var(--ink-soft); font-weight:500; margin-top:8px; line-height:1.5;}
+  .role-options{width:100%; margin-top:32px; display:flex; flex-direction:column; gap:12px;}
+  .role-card{
+    display:flex; align-items:center; gap:14px; text-align:left;
+    width:100%; padding:18px; border-radius:var(--radius-md);
+    background:var(--bg); border:2px solid transparent;
+    cursor:pointer; transition:border-color .12s ease, background .12s ease;
+  }
+  .role-card:active{background:var(--blue-soft); border-color:var(--blue);}
+  .role-ic{
+    width:44px;height:44px;border-radius:50%; flex-shrink:0;
+    background:var(--surface); display:flex;align-items:center;justify-content:center;
+    font-size:22px; box-shadow:var(--shadow-card);
+  }
+  .role-text b{font-size:15px; display:block; font-weight:700;}
+  .role-text span{font-size:12.5px; color:var(--ink-soft); font-weight:500;}
+  /* ---- Onboarding forms (driver / passenger) ---- */
+  .onboarding-form{width:100%; display:flex; flex-direction:column; overflow-y:auto; max-height:100%;}
+  .ob-field{
+    text-align:left; margin-bottom:14px;
+  }
+  .ob-field label{
+    display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .ob-field input, .ob-field select{
+    width:100%; border:none; background:var(--bg); border-radius:var(--radius-sm);
+    padding:13px 14px; font-family:inherit; font-size:14.5px; font-weight:600; color:var(--ink);
+    outline:none;
+  }
+  .ob-row{display:flex; gap:10px;}
+  .ob-row .ob-field{flex:1;}
+  .ob-submit-btn{
+    margin-top:6px; width:100%; border:none; border-radius:var(--radius-sm);
+    background:var(--blue); color:#fff; font-family:inherit; font-weight:700; font-size:15px;
+    padding:15px; cursor:pointer;
+  }
+  .ob-back{
+    margin-top:14px; text-align:center; font-size:13px; color:var(--ink-soft); font-weight:600; cursor:pointer;
+  }
 </style>
 </head>
 <body>
 <div class="device">
+
+  <!-- ===== ONBOARDING: ROLE SELECT ===== -->
+  <div class="onboarding" id="onboarding">
+
+    <div id="onboarding-role">
+      <div class="onboarding-logo"></div>
+      <div class="onboarding-title">Добро пожаловать в Попутку</div>
+      <div class="onboarding-sub">Расскажите, как будете пользоваться приложением — это можно изменить позже в профиле</div>
+      <div class="role-options">
+        <div class="role-card" onclick="showOnboardingStep('driver')">
+          <div class="role-ic">🚗</div>
+          <div class="role-text"><b>Я водитель</b><span>Публикую поездки и беру попутчиков</span></div>
+        </div>
+        <div class="role-card" onclick="showOnboardingStep('passenger')">
+          <div class="role-ic">🙋</div>
+          <div class="role-text"><b>Я попутчик</b><span>Ищу поездку и еду с водителем</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="onboarding-driver-form" class="onboarding-form" style="display:none;">
+      <div class="onboarding-title" style="font-size:19px;">Данные водителя</div>
+      <div class="onboarding-sub" style="margin-bottom:20px;">Заполните один раз — эти данные увидят попутчики</div>
+      <div class="ob-field"><label>Марка и модель авто</label><input id="ob-car-model" placeholder="Например, Hyundai Sonata"></div>
+      <div class="ob-field"><label>Госномер</label><input id="ob-car-plate" placeholder="12가 3456"></div>
+      <div class="ob-row">
+        <div class="ob-field"><label>Откуда</label><input id="ob-driver-from" placeholder="Сеул" value="Сеул"></div>
+        <div class="ob-field"><label>Куда</label><input id="ob-driver-to" placeholder="Пусан" value="Пусан"></div>
+      </div>
+      <div class="ob-row">
+        <div class="ob-field"><label>Дата</label><input id="ob-driver-date" type="date"></div>
+        <div class="ob-field"><label>Время</label><input id="ob-driver-time" type="time" value="09:00"></div>
+      </div>
+      <div class="ob-row">
+        <div class="ob-field"><label>Цена, ₩</label><input id="ob-driver-price" placeholder="30 000"></div>
+        <div class="ob-field"><label>Свободных мест</label><input id="ob-driver-seats" type="number" min="1" max="8" value="3"></div>
+      </div>
+      <button class="ob-submit-btn" onclick="submitDriverOnboarding()">Опубликовать поездку</button>
+      <div class="ob-back" onclick="backToRoleSelect()">← Назад к выбору роли</div>
+    </div>
+
+    <div id="onboarding-passenger-form" class="onboarding-form" style="display:none;">
+      <div class="onboarding-title" style="font-size:19px;">Куда едем?</div>
+      <div class="onboarding-sub" style="margin-bottom:20px;">Укажите маршрут и дату — покажем подходящие поездки</div>
+      <div class="ob-field"><label>Откуда</label><input id="ob-pass-from" placeholder="Сеул" value="Сеул"></div>
+      <div class="ob-field"><label>Куда</label><input id="ob-pass-to" placeholder="Пусан" value="Пусан"></div>
+      <div class="ob-field"><label>Дата поездки</label><input id="ob-pass-date" type="date"></div>
+      <button class="ob-submit-btn" onclick="submitPassengerOnboarding()">Найти поездку</button>
+      <div class="ob-back" onclick="backToRoleSelect()">← Назад к выбору роли</div>
+    </div>
+
+  </div>
 
   <!-- ===== SEARCH SCREEN ===== -->
   <div class="screen active" id="screen-search">
@@ -413,7 +521,7 @@
       <div class="search-card">
         <div class="field-row"><span class="dot from"></span><input id="from-input" placeholder="Откуда" value="Сеул"></div>
         <div class="field-row"><span class="dot to"></span><input id="to-input" placeholder="Куда" value="Пусан"></div>
-        <div class="field-row"><span class="cal">📅</span><input placeholder="Дата" value="Сегодня, 9 августа"></div>
+        <div class="field-row"><span class="cal">📅</span><input id="date-input" type="date"></div>
         <button class="swap-btn" onclick="swapFields()">⇅</button>
         <button class="search-btn" onclick="renderResults()">Найти попутку</button>
       </div>
@@ -815,11 +923,94 @@ function setMode(mode){
   document.getElementById('profile-add-ride').style.display = mode==='driver' ? 'flex' : 'none';
 }
 
+/* ================= ONBOARDING / ROLE ================= */
+let userRole = null;
+
+const CITY_COORDS = {
+  "Сеул": [37.5665, 126.9780],
+  "Пусан": [35.1796, 129.0756],
+  "Тэджон": [36.3504, 127.3845],
+  "Тэгу": [35.8714, 128.6014],
+  "Инчхон": [37.4563, 126.7052],
+  "Кванджу": [35.1595, 126.8526],
+  "Чхонан": [36.8151, 127.1139]
+};
+function coordsFor(city){
+  return CITY_COORDS[city.trim()] || CITY_COORDS["Сеул"];
+}
+
+function showOnboardingStep(role){
+  document.getElementById('onboarding-role').style.display = 'none';
+  document.getElementById('onboarding-driver-form').style.display = role === 'driver' ? 'flex' : 'none';
+  document.getElementById('onboarding-passenger-form').style.display = role === 'passenger' ? 'flex' : 'none';
+}
+function backToRoleSelect(){
+  document.getElementById('onboarding-role').style.display = 'flex';
+  document.getElementById('onboarding-driver-form').style.display = 'none';
+  document.getElementById('onboarding-passenger-form').style.display = 'none';
+}
+
+function submitDriverOnboarding(){
+  const carModel = document.getElementById('ob-car-model').value.trim() || "Автомобиль не указан";
+  const carPlate = document.getElementById('ob-car-plate').value.trim();
+  const fromCity = document.getElementById('ob-driver-from').value.trim() || "Сеул";
+  const toCity = document.getElementById('ob-driver-to').value.trim() || "Пусан";
+  const time = document.getElementById('ob-driver-time').value || "09:00";
+  const price = document.getElementById('ob-driver-price').value.trim();
+  const seats = document.getElementById('ob-driver-seats').value || "3";
+
+  document.querySelector('#profile-driver-info .profile-row-text').innerHTML =
+    `<b>Ваш автомобиль</b><span>${carModel}${carPlate ? ' · ' + carPlate : ''}</span>`;
+
+  const [fLat, fLng] = coordsFor(fromCity);
+  const [tLat, tLng] = coordsFor(toCity);
+  const newId = Math.max(...rides.map(r => r.id)) + 1;
+  rides.push({
+    id: newId, driver: "Вы", initials: "ВЫ", rating: "Новый водитель",
+    price: (price ? price + " ₩" : "По договорённости"),
+    seats: `${seats} мест${seats == 1 ? 'о' : ' '}`.trim(),
+    stops: [
+      {city: fromCity, time: time, lat: fLat, lng: fLng, note: "Ваше отправление"},
+      {city: toCity, time: time, lat: tLat, lng: tLng, note: "Ваше прибытие"}
+    ]
+  });
+  renderResults();
+  renderDriversByCity();
+
+  document.getElementById('onboarding').style.display = 'none';
+  userRole = 'driver';
+  setMode('driver');
+  goTo('screen-profile');
+}
+
+function submitPassengerOnboarding(){
+  const fromCity = document.getElementById('ob-pass-from').value.trim() || "Сеул";
+  const toCity = document.getElementById('ob-pass-to').value.trim() || "Пусан";
+  const date = document.getElementById('ob-pass-date').value;
+
+  document.getElementById('from-input').value = fromCity;
+  document.getElementById('to-input').value = toCity;
+  if(date) document.getElementById('date-input').value = date;
+
+  document.getElementById('onboarding').style.display = 'none';
+  userRole = 'passenger';
+  setMode('passenger');
+  renderResults();
+  goTo('screen-search');
+}
+
 /* ================= INIT ================= */
 renderResults();
 renderChatList();
 renderDriversByCity();
 refreshNavs();
+(function setDefaultDates(){
+  const today = new Date().toISOString().slice(0,10);
+  ['date-input','ob-driver-date','ob-pass-date'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = today;
+  });
+})();
 </script>
 </body>
 </html>
