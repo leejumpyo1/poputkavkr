@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Попутка — прототип</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+  :root{
+    /* Toss design tokens */
+    --bg:#F2F4F6;
+    --surface:#FFFFFF;
+    --blue:#3182F6;
+    --blue-deep:#1B64DA;
+    --blue-soft:#EBF2FF;
+    --ink:#191F28;
+    --ink-soft:#8B95A1;
+    --ink-faint:#B0B8C1;
+    --mint:#00CBA0;
+    --red:#F04452;
+    --line:#EEF1F4;
+    --radius-lg:20px;
+    --radius-md:16px;
+    --radius-sm:12px;
+    --shadow-card:0 2px 10px rgba(25,31,40,.05), 0 1px 2px rgba(25,31,40,.04);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:#E4E7EB;}
+  body{
+    font-family:'Pretendard Variable','Inter',sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    min-height:100vh;
+    padding:18px 0;
+  }
+  .device{
+    width:100%;
+    max-width:420px;
+    height:860px;
+    max-height:96vh;
+    background:var(--bg);
+    border-radius:36px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 30px 70px rgba(25,31,40,.35), 0 0 0 8px #111418;
+    display:flex;
+    flex-direction:column;
+  }
+  /* ---- Top bar ---- */
+  .topbar{
+    background:var(--surface);
+    color:var(--ink);
+    padding:20px 20px 18px;
+    position:relative;
+    flex-shrink:0;
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .brand{
+    display:flex;align-items:center;gap:9px;
+    font-weight:800;
+    font-size:20px;
+    letter-spacing:-.3px;
+  }
+  .brand-mark{
+    width:28px;height:28px;border-radius:9px;
+    background:var(--blue);
+    position:relative;
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand-mark::after{
+    content:"";
+    width:12px;height:12px;
+    border-radius:3px;
+    background:#fff;
+  }
+  .topbar .sub{
+    margin-top:4px;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink-soft);
+  }
+  /* ---- Content ---- */
+  .content{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    background:var(--bg);
+    padding-bottom:12px;
+  }
+  .content::-webkit-scrollbar{display:none;}
+  /* ---- Search form ---- */
+  .search-card{
+    margin:16px 20px 6px;
+    background:var(--surface);
+    border-radius:var(--radius-lg);
+    padding:18px 16px;
+    box-shadow:var(--shadow-card);
+    position:relative;
+  }
+  .field-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .field-row:last-of-type{border-bottom:none;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot.from{background:var(--blue);}
+  .dot.to{background:var(--mint);}
+  .field-row input{
+    background:transparent;border:none;outline:none;
+    color:var(--ink); font-family:inherit;font-size:15.5px;font-weight:600;
+    width:100%;
+  }
+  .field-row input::placeholder{color:var(--ink-faint); font-weight:500;}
+  .field-row .cal{color:var(--ink-soft);font-size:15px;}
+  .swap-btn{
+    position:absolute; right:16px; top:66px;
+    width:32px;height:32px;border-radius:50%;
+    background:var(--blue-soft); border:none;
+    color:var(--blue); display:flex;align-items:center;justify-content:center;
+    font-size:14px; cursor:pointer; font-weight:700;
+  }
+  .search-btn{
+    margin-top:16px; width:100%; border:none; border-radius:var(--radius-sm);
+    background:var(--blue); color:#fff;
+    font-family:inherit; font-weight:700; font-size:15.5px;
+    padding:15px; cursor:pointer;
+    letter-spacing:-.2px;
+  }
+  .search-btn:active{background:var(--blue-deep);}
+  .section-label{
+    margin:22px 20px 10px;
+    font-size:17px; font-weight:800;
+    color:var(--ink); letter-spacing:-.3px;
+  }
+  /* ---- Ride card ---- */
+  .ticket{
+    margin:0 20px 12px;
+    background:var(--surface);
+    border-radius:var(--radius-md);
+    display:flex;
+    cursor:pointer;
+    box-shadow:var(--shadow-card);
+    overflow:hidden;
+    transition:transform .12s ease;
+  }
+  .ticket:active{transform:scale(.98);}
+  .ticket-main{flex:1; padding:16px 14px 16px 18px;}
+  .ticket-route{
+    display:flex; align-items:center; gap:8px;
+    font-weight:800; font-size:17px; letter-spacing:-.3px;
+  }
+  .ticket-route .via{
+    flex:1; height:2px; background:var(--line);
+    position:relative; margin:0 2px; border-radius:2px;
+  }
+  .ticket-cities{
+    display:flex; justify-content:space-between;
+    font-size:12.5px; color:var(--ink-soft); margin-top:4px; font-weight:600;
+  }
+  .ticket-via-list{
+    margin-top:8px; font-size:12px; color:var(--ink-soft); font-weight:500;
+  }
+  .ticket-via-list span{color:var(--blue); font-weight:700;}
+  .ticket-meta{
+    margin-top:12px; display:flex; gap:14px; align-items:center;
+  }
+  .driver{display:flex;align-items:center;gap:8px;}
+  .avatar{
+    width:28px;height:28px;border-radius:50%;
+    background:var(--blue-soft); color:var(--blue);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800; font-size:11px;
+  }
+  .driver-name{font-size:13px; font-weight:700;}
+  .rating{font-size:11.5px; color:var(--ink-soft); font-weight:500;}
+  .ticket-stub{
+    width:88px; flex-shrink:0;
+    background:var(--surface); color:var(--ink);
+    display:flex; flex-direction:column; align-items:flex-end; justify-content:center;
+    position:relative;
+    padding-right:16px;
+    border-left:1px solid var(--line);
+  }
+  .ticket-stub .price{
+    font-weight:800; font-size:16px; color:var(--blue); letter-spacing:-.3px;
+  }
+  .ticket-stub .seats{
+    font-size:10.5px; color:var(--ink-soft); margin-top:3px; font-weight:600;
+  }
+  /* ---- Map screen ---- */
+  #map{ width:100%; height:260px; }
+  .route-timeline{
+    margin:16px 20px;
+    background:var(--surface);
+    border-radius:var(--radius-md);
+    padding:18px;
+    box-shadow:var(--shadow-card);
+  }
+  .stop{
+    display:flex; gap:14px; position:relative; padding-bottom:22px;
+  }
+  .stop:last-child{padding-bottom:0;}
+  .stop-line{
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .stop-node{
+    width:11px;height:11px;border-radius:50%;
+    background:var(--blue);
+    flex-shrink:0; margin-top:3px;
+  }
+  .stop:first-child .stop-node{background:var(--blue);}
+  .stop:last-child .stop-node{background:var(--mint);}
+  .stop-track{
+    flex:1; width:2px; background:var(--line);
+    margin-top:4px; border-radius:2px;
+  }
+  .stop-info{flex:1;}
+  .stop-city{font-weight:700; font-size:15px; letter-spacing:-.2px;}
+  .stop-time{
+    font-size:13px; color:var(--blue); font-weight:700;
+  }
+  .stop-note{font-size:12px; color:var(--ink-soft); margin-top:3px; font-weight:500;}
+  .map-actions{
+    display:flex; gap:10px; margin:0 20px 16px;
+  }
+  .btn-secondary, .btn-primary{
+    flex:1; text-align:center; padding:15px; border-radius:var(--radius-sm); font-weight:700;
+    font-family:inherit; font-size:14.5px; cursor:pointer; border:none;
+  }
+  .btn-primary{background:var(--blue); color:#fff;}
+  .btn-secondary{background:var(--surface); color:var(--ink); box-shadow:var(--shadow-card);}
+  /* ---- Chat list ---- */
+  .chat-row{
+    display:flex; align-items:center; gap:12px;
+    margin:0 20px 4px; padding:13px 8px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .chat-row .avatar{width:44px;height:44px;font-size:15px;}
+  .chat-body{flex:1; min-width:0;}
+  .chat-top{display:flex; justify-content:space-between; align-items:baseline;}
+  .chat-name{font-weight:700; font-size:14.5px;}
+  .chat-time{font-size:11.5px; color:var(--ink-soft); font-weight:500;}
+  .chat-preview{font-size:13px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; font-weight:500;}
+  .badge{
+    background:var(--red); color:#fff; font-size:10.5px; font-weight:700;
+    border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  /* ---- Chat window ---- */
+  .chat-window{display:flex; flex-direction:column; height:100%;}
+  .chat-header{
+    display:flex; align-items:center; gap:10px;
+    padding:16px 20px; background:var(--surface); color:var(--ink);
+    border-bottom:1px solid var(--line);
+  }
+  .back-btn{
+    width:32px;height:32px;border-radius:50%; background:var(--bg);
+    display:flex;align-items:center;justify-content:center; color:var(--ink);
+    cursor:pointer; font-size:16px; flex-shrink:0; font-weight:700;
+  }
+  .chat-header-name{font-weight:700; font-size:15px;}
+  .chat-header-sub{font-size:11.5px; color:var(--mint); font-weight:600;}
+  .chat-messages{
+    flex:1; overflow-y:auto; padding:16px 16px 8px; display:flex; flex-direction:column; gap:8px;
+    background:var(--bg);
+  }
+  .msg{
+    max-width:75%; padding:10px 14px; border-radius:16px; font-size:13.5px; line-height:1.45; font-weight:500;
+  }
+  .msg.them{ align-self:flex-start; background:var(--surface); border-bottom-left-radius:4px; box-shadow:var(--shadow-card);}
+  .msg.me{ align-self:flex-end; background:var(--blue); color:#fff; border-bottom-right-radius:4px; font-weight:600;}
+  .msg-time{font-size:9.5px; opacity:.65; margin-top:4px; text-align:right;}
+  .chat-input-row{
+    display:flex; gap:8px; padding:12px 14px; background:var(--surface); border-top:1px solid var(--line);
+  }
+  .chat-input-row input{
+    flex:1; border:none; background:var(--bg); border-radius:22px; padding:11px 16px;
+    font-family:inherit; font-size:13.5px; outline:none; font-weight:500;
+  }
+  .send-btn{
+    width:40px;height:40px;border-radius:50%; background:var(--blue); border:none;
+    color:#fff; font-weight:700; cursor:pointer; flex-shrink:0;
+  }
+  /* ---- Bottom nav ---- */
+  .bottom-nav{
+    display:flex; align-items:flex-end; background:var(--surface); flex-shrink:0;
+    padding:10px 6px calc(10px + env(safe-area-inset-bottom));
+    position:relative;
+    border-top:1px solid var(--line);
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    color:var(--ink-faint); font-size:10px; font-weight:600; cursor:pointer; padding:4px 0;
+  }
+  .nav-item.active{color:var(--blue);}
+  .nav-ic{width:20px;height:20px; display:flex;align-items:center;justify-content:center; font-size:17px;}
+  /* center taxi button — bigger, raised, always-on accent */
+  .nav-item.nav-center{
+    flex:0 0 74px;
+    margin-top:-28px;
+    color:var(--ink-soft);
+  }
+  .nav-center .nav-ic{
+    width:56px; height:56px; border-radius:50%;
+    background:var(--blue);
+    color:#fff;
+    font-size:26px;
+    box-shadow:0 10px 20px rgba(49,130,246,.4), 0 0 0 6px var(--surface);
+  }
+  .nav-item.nav-center.active .nav-ic{background:var(--blue-deep);}
+  .nav-center.active{color:var(--blue);}
+  /* ---- Drivers by city ---- */
+  .city-group{margin:18px 20px 4px;}
+  .city-heading{
+    display:flex; align-items:center; gap:8px;
+    font-weight:800; font-size:15.5px; letter-spacing:-.2px;
+    margin-bottom:10px;
+  }
+  .city-heading .count{
+    font-weight:500; font-size:12px; color:var(--ink-soft);
+  }
+  .driver-row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--surface); border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card);
+    padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  }
+  .driver-row .avatar{width:40px;height:40px;font-size:13px;}
+  .driver-row-text{flex:1;}
+  .driver-row-text b{font-size:14px; display:block; font-weight:700;}
+  .driver-row-text span{font-size:12px; color:var(--ink-soft); font-weight:500;}
+  .driver-row-arrow{color:var(--ink-faint); font-size:18px;}
+  /* ---- Profile ---- */
+  .profile-card{
+    margin:16px 20px; padding:26px 22px; border-radius:var(--radius-lg);
+    background:var(--blue-soft); color:var(--ink); text-align:center;
+  }
+  .profile-avatar{
+    width:60px;height:60px;border-radius:50%; margin:0 auto 12px;
+    background:var(--blue); color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800; font-size:19px;
+  }
+  .profile-name{font-weight:800; font-size:18px; letter-spacing:-.3px;}
+  .profile-rating{font-size:12.5px; color:var(--ink-soft); margin-top:4px; font-weight:600;}
+  .mode-switch{
+    display:flex; margin:0 20px 4px; background:var(--line);
+    border-radius:var(--radius-sm); padding:4px; gap:4px;
+  }
+  .mode-btn{
+    flex:1; text-align:center; padding:10px; border-radius:9px; font-size:13.5px; font-weight:700;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .mode-btn.active{background:var(--surface); color:var(--blue); box-shadow:0 1px 3px rgba(25,31,40,.12);}
+  .profile-row{
+    display:flex; align-items:center; gap:10px;
+    margin:0 20px 10px; padding:15px 16px;
+    background:var(--surface); border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card);
+    cursor:pointer;
+  }
+  .profile-row-text{flex:1;}
+  .profile-row-text b{font-size:14px; display:block; font-weight:700;}
+  .profile-row-text span{font-size:12px; color:var(--ink-soft); font-weight:500;}
+  .profile-row-arrow{color:var(--ink-faint); font-size:18px;}
+  /* ---- Settings ---- */
+  .settings-row{
+    display:flex; justify-content:space-between; align-items:center;
+    margin:0 20px; padding:15px 4px;
+    border-bottom:1px solid var(--line);
+    font-size:14px; font-weight:600;
+  }
+  .settings-val{color:var(--ink-soft); font-size:12.5px; font-weight:500;}
+  .toggle{
+    width:40px;height:24px;border-radius:12px; background:var(--line); position:relative; cursor:pointer;
+    transition:background .15s ease;
+  }
+  .toggle::after{
+    content:""; position:absolute; top:2px; left:2px; width:20px;height:20px;border-radius:50%;
+    background:#fff; transition:left .15s ease; box-shadow:0 1px 3px rgba(25,31,40,.25);
+  }
+  .toggle.active{background:var(--blue);}
+  .toggle.active::after{left:18px;}
+  .settings-row.logout{
+    justify-content:center; color:var(--red); font-weight:700; border-bottom:none;
+    margin-top:14px; cursor:pointer;
+  }
+  .screen{display:none; flex-direction:column; height:100%;}
+  .screen.active{display:flex;}
+  .hidden{display:none !important;}
+  .empty{
+    text-align:center; padding:60px 30px; color:var(--ink-soft); font-size:13px;
+  }
+</style>
+</head>
+<body>
+<div class="device">
+
+  <!-- ===== SEARCH SCREEN ===== -->
+  <div class="screen active" id="screen-search">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark"></div>Попутка</div>
+      <div class="sub">Едем вместе — дешевле и веселее</div>
+    </div>
+    <div class="content">
+      <div class="search-card">
+        <div class="field-row"><span class="dot from"></span><input id="from-input" placeholder="Откуда" value="Москва"></div>
+        <div class="field-row"><span class="dot to"></span><input id="to-input" placeholder="Куда" value="Санкт-Петербург"></div>
+        <div class="field-row"><span class="cal">📅</span><input placeholder="Дата" value="Сегодня, 9 августа"></div>
+        <button class="swap-btn" onclick="swapFields()">⇅</button>
+        <button class="search-btn" onclick="renderResults()">Найти попутку</button>
+      </div>
+
+      <div class="section-label" id="results-label">Доступные поездки</div>
+      <div id="results-list"></div>
+    </div>
+    <div class="bottom-nav" id="nav-search"></div>
+  </div>
+
+  <!-- ===== DRIVERS BY CITY SCREEN ===== -->
+  <div class="screen" id="screen-drivers">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark"></div>Водители</div>
+      <div class="sub">По городам отправления</div>
+    </div>
+    <div class="content" id="drivers-list"></div>
+    <div class="bottom-nav" id="nav-drivers"></div>
+  </div>
+
+  <!-- ===== PROFILE SCREEN ===== -->
+  <div class="screen" id="screen-profile">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark"></div>Личный кабинет</div>
+      <div class="sub">Ваш профиль в Попутке</div>
+    </div>
+    <div class="content">
+      <div class="profile-card">
+        <div class="profile-avatar">ВЫ</div>
+        <div class="profile-name">Вы</div>
+        <div class="profile-rating">★ 4.8 · 24 поездки</div>
+      </div>
+      <div class="mode-switch">
+        <div class="mode-btn active" id="mode-passenger" onclick="setMode('passenger')">Пассажир</div>
+        <div class="mode-btn" id="mode-driver" onclick="setMode('driver')">Водитель</div>
+      </div>
+      <div class="section-label">Пассажир</div>
+      <div class="profile-row" id="profile-passenger-info">
+        <div class="profile-row-text"><b>3 предстоящие поездки</b><span>Ближайшая — сегодня в 08:00, Москва → СПб</span></div>
+      </div>
+      <div class="profile-row" id="profile-driver-info" style="display:none;">
+        <div class="profile-row-text"><b>Ваш автомобиль</b><span>Skoda Octavia · А123ВС 777</span></div>
+      </div>
+      <div class="section-label">Быстрые действия</div>
+      <div class="profile-row" onclick="goTo('screen-chats')">
+        <div class="profile-row-text"><b>Мои чаты</b><span>Переписки с водителями и пассажирами</span></div>
+        <div class="profile-row-arrow">›</div>
+      </div>
+      <div class="profile-row" onclick="goTo('screen-search')">
+        <div class="profile-row-text"><b>История поездок</b><span>Все завершённые поездки</span></div>
+        <div class="profile-row-arrow">›</div>
+      </div>
+      <div class="profile-row" id="profile-add-ride" style="display:none;" onclick="goTo('screen-search')">
+        <div class="profile-row-text"><b>Предложить поездку</b><span>Укажите маршрут, время и места</span></div>
+        <div class="profile-row-arrow">›</div>
+      </div>
+    </div>
+    <div class="bottom-nav" id="nav-profile"></div>
+  </div>
+
+  <!-- ===== SETTINGS SCREEN ===== -->
+  <div class="screen" id="screen-settings">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark"></div>Настройки</div>
+      <div class="sub">Управление приложением</div>
+    </div>
+    <div class="content">
+      <div class="section-label">Аккаунт</div>
+      <div class="settings-row"><span>Имя и телефон</span><span class="settings-val">Вы, +7 900 ••• •• 12 ›</span></div>
+      <div class="settings-row"><span>Способ оплаты</span><span class="settings-val">Карта •• 41 ›</span></div>
+      <div class="section-label">Приложение</div>
+      <div class="settings-row toggle-row"><span>Push-уведомления</span><div class="toggle active" onclick="this.classList.toggle('active')"></div></div>
+      <div class="settings-row toggle-row"><span>Уведомления о новых попутках</span><div class="toggle active" onclick="this.classList.toggle('active')"></div></div>
+      <div class="settings-row toggle-row"><span>Тёмная тема</span><div class="toggle" onclick="this.classList.toggle('active')"></div></div>
+      <div class="settings-row"><span>Язык</span><span class="settings-val">Русский ›</span></div>
+      <div class="section-label">Безопасность</div>
+      <div class="settings-row"><span>Верификация водителя</span><span class="settings-val">Пройдена ✓</span></div>
+      <div class="settings-row"><span>Экстренный контакт</span><span class="settings-val">Не указан ›</span></div>
+      <div class="settings-row logout">Выйти из аккаунта</div>
+    </div>
+    <div class="bottom-nav" id="nav-settings"></div>
+  </div>
+
+  <!-- ===== MAP / RIDE DETAIL SCREEN ===== -->
+  <div class="screen" id="screen-map">
+    <div class="topbar" style="padding-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="back-btn" onclick="goTo('screen-search')">←</div>
+        <div>
+          <div class="brand" style="font-size:16px;">Маршрут поездки</div>
+          <div class="sub" id="map-subtitle">Москва → Санкт-Петербург</div>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      <div id="map"></div>
+      <div class="section-label">Города и время в пути</div>
+      <div class="route-timeline" id="route-timeline"></div>
+      <div class="map-actions">
+        <button class="btn-secondary" onclick="goTo('screen-search')">Все поездки</button>
+        <button class="btn-primary" onclick="openChatFor(currentRide)">Написать водителю</button>
+      </div>
+    </div>
+    <div class="bottom-nav" id="nav-map"></div>
+  </div>
+
+  <!-- ===== CHAT LIST SCREEN ===== -->
+  <div class="screen" id="screen-chats">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark"></div>Чаты</div>
+      <div class="sub">Общение с водителями и пассажирами</div>
+    </div>
+    <div class="content" id="chat-list"></div>
+    <div class="bottom-nav" id="nav-chats"></div>
+  </div>
+
+  <!-- ===== CHAT WINDOW SCREEN ===== -->
+  <div class="screen" id="screen-chat-window">
+    <div class="chat-window">
+      <div class="chat-header">
+        <div class="back-btn" onclick="goTo('screen-chats')">←</div>
+        <div>
+          <div class="chat-header-name" id="cw-name">—</div>
+          <div class="chat-header-sub">в сети</div>
+        </div>
+      </div>
+      <div class="chat-messages" id="cw-messages"></div>
+      <div class="chat-input-row">
+        <input id="cw-input" placeholder="Написать сообщение…" onkeydown="if(event.key==='Enter')sendMsg()">
+        <button class="send-btn" onclick="sendMsg()">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= DATA ================= */
+const rides = [
+  {
+    id: 1,
+    driver: "Игорь", initials: "ИГ", rating: "4.9 · 132 поездки",
+    price: "1 800 ₽", seats: "2 места",
+    stops: [
+      {city:"Москва", time:"08:00", lat:55.7558, lng:37.6173, note:"Отправление, м. Тверская"},
+      {city:"Тверь", time:"09:30", lat:56.8587, lng:35.9006, note:"Остановка 10 минут"},
+      {city:"Великий Новгород", time:"12:00", lat:58.5215, lng:31.2755, note:"Остановка на обед"},
+      {city:"Санкт-Петербург", time:"14:30", lat:59.9343, lng:30.3351, note:"Прибытие, м. Московская"}
+    ]
+  },
+  {
+    id: 2,
+    driver: "Марина", initials: "МК", rating: "5.0 · 58 поездок",
+    price: "1 600 ₽", seats: "3 места",
+    stops: [
+      {city:"Москва", time:"09:15", lat:55.7558, lng:37.6173, note:"Отправление, ТЦ Мега"},
+      {city:"Вышний Волочёк", time:"11:00", lat:57.5842, lng:34.5681, note:"Короткая остановка"},
+      {city:"Санкт-Петербург", time:"15:00", lat:59.9343, lng:30.3351, note:"Прибытие, Пулково"}
+    ]
+  },
+  {
+    id: 3,
+    driver: "Алексей", initials: "АЛ", rating: "4.7 · 210 поездок",
+    price: "2 000 ₽", seats: "1 место",
+    stops: [
+      {city:"Москва", time:"07:00", lat:55.7558, lng:37.6173, note:"Отправление, м. ВДНХ"},
+      {city:"Валдай", time:"10:00", lat:57.9722, lng:33.2492, note:"Остановка у озера"},
+      {city:"Санкт-Петербург", time:"13:45", lat:59.9343, lng:30.3351, note:"Прибытие, м. Девяткино"}
+    ]
+  }
+];
+
+const chats = [
+  {id:1, name:"Игорь", initials:"ИГ", time:"14:02", preview:"Отлично, жду вас у метро", unread:1,
+    messages:[
+      {from:"them", text:"Привет! Подтверждаю место на завтра", time:"13:40"},
+      {from:"me", text:"Здравствуйте! Да, выезжаем в 08:00?", time:"13:52"},
+      {from:"them", text:"Да, в 08:00 от Тверской", time:"13:58"},
+      {from:"them", text:"Отлично, жду вас у метро", time:"14:02"}
+    ]},
+  {id:2, name:"Марина", initials:"МК", time:"вчера", preview:"Можно с небольшим чемоданом?", unread:0,
+    messages:[
+      {from:"me", text:"Здравствуйте! Можно с небольшим чемоданом?", time:"вчера"},
+      {from:"them", text:"Да, конечно, места хватит", time:"вчера"}
+    ]},
+  {id:3, name:"Алексей", initials:"АЛ", time:"пн", preview:"Спасибо за поездку!", unread:0,
+    messages:[
+      {from:"them", text:"Спасибо за поездку, доброго пути!", time:"пн"}
+    ]}
+];
+
+let currentRide = rides[0];
+let currentChat = null;
+let map, routeLayer;
+
+/* ================= NAV ================= */
+const navConfig = [
+  {id:"screen-drivers", label:"Водители", icon:"👥"},
+  {id:"screen-map", label:"Карта", icon:"📍"},
+  {id:"screen-search", label:"Поиск", icon:"🚕", center:true},
+  {id:"screen-profile", label:"Профиль", icon:"👤"},
+  {id:"screen-settings", label:"Настройки", icon:"⚙️"}
+];
+function buildNav(containerId){
+  const el = document.getElementById(containerId);
+  el.innerHTML = navConfig.map(n =>
+    `<div class="nav-item ${n.center?'nav-center':''} ${n.id===activeScreenForNav()?'active':''}" onclick="goTo('${n.id}')">
+       <div class="nav-ic">${n.icon}</div>${n.label}
+     </div>`).join("");
+}
+function activeScreenForNav(){
+  const current = document.querySelector('.screen.active');
+  return current ? current.id : 'screen-search';
+}
+function refreshNavs(){
+  ["nav-search","nav-map","nav-chats","nav-drivers","nav-profile","nav-settings"].forEach(id=>{
+    if(document.getElementById(id)) buildNav(id);
+  });
+}
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  refreshNavs();
+  if(id==='screen-map'){ setTimeout(()=>{ if(map) map.invalidateSize(); },50); }
+}
+
+/* ================= SEARCH RESULTS ================= */
+function renderResults(){
+  const list = document.getElementById('results-list');
+  list.innerHTML = rides.map(r => {
+    const from = r.stops[0], to = r.stops[r.stops.length-1];
+    const via = r.stops.slice(1,-1).map(s=>s.city).join(" · ");
+    return `
+    <div class="ticket" onclick="openRide(${r.id})">
+      <div class="ticket-main">
+        <div class="ticket-route">
+          <span>${from.time}</span><span class="via"></span><span>${to.time}</span>
+        </div>
+        <div class="ticket-cities"><span>${from.city}</span><span>${to.city}</span></div>
+        ${via ? `<div class="ticket-via-list">через <span>${via}</span></div>` : ''}
+        <div class="ticket-meta">
+          <div class="driver">
+            <div class="avatar">${r.initials}</div>
+            <div>
+              <div class="driver-name">${r.driver}</div>
+              <div class="rating">${r.rating}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ticket-stub">
+        <div class="price">${r.price}</div>
+        <div class="seats">${r.seats}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function swapFields(){
+  const f = document.getElementById('from-input');
+  const t = document.getElementById('to-input');
+  const tmp = f.value; f.value = t.value; t.value = tmp;
+}
+
+/* ================= RIDE / MAP ================= */
+function openRide(id){
+  currentRide = rides.find(r=>r.id===id);
+  document.getElementById('map-subtitle').textContent =
+    currentRide.stops[0].city + " → " + currentRide.stops[currentRide.stops.length-1].city;
+  renderTimeline();
+  goTo('screen-map');
+  setTimeout(initOrUpdateMap, 60);
+}
+
+function renderTimeline(){
+  const el = document.getElementById('route-timeline');
+  el.innerHTML = currentRide.stops.map((s,i) => `
+    <div class="stop">
+      <div class="stop-line">
+        <div class="stop-node"></div>
+        ${i < currentRide.stops.length-1 ? '<div class="stop-track"></div>' : ''}
+      </div>
+      <div class="stop-info">
+        <div class="stop-city">${s.city} <span class="stop-time">${s.time}</span></div>
+        <div class="stop-note">${s.note}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function initOrUpdateMap(){
+  const coords = currentRide.stops.map(s=>[s.lat,s.lng]);
+  if(!map){
+    map = L.map('map', {zoomControl:true, attributionControl:false});
+  }
+  if(routeLayer){ map.removeLayer(routeLayer); }
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  routeLayer = L.layerGroup().addTo(map);
+  L.polyline(coords, {color:'#3182F6', weight:4, opacity:.9, lineCap:'round'}).addTo(routeLayer);
+
+  currentRide.stops.forEach((s,i)=>{
+    const isEnd = i===0 || i===currentRide.stops.length-1;
+    const color = i===0 ? '#3182F6' : (i===currentRide.stops.length-1 ? '#00CBA0' : '#191F28');
+    const marker = L.circleMarker([s.lat,s.lng], {
+      radius: isEnd ? 8 : 6, color:'#fff', weight:2, fillColor:color, fillOpacity:1
+    }).addTo(routeLayer);
+    marker.bindTooltip(`<b>${s.city}</b><br>${s.time}`, {direction:'top', offset:[0,-6]});
+  });
+  map.fitBounds(L.latLngBounds(coords), {padding:[24,24]});
+}
+
+/* ================= CHAT LIST ================= */
+function renderChatList(){
+  const el = document.getElementById('chat-list');
+  el.innerHTML = chats.map(c => `
+    <div class="chat-row" onclick="openChatFor(null, ${c.id})">
+      <div class="avatar">${c.initials}</div>
+      <div class="chat-body">
+        <div class="chat-top"><span class="chat-name">${c.name}</span><span class="chat-time">${c.time}</span></div>
+        <div class="chat-preview">${c.preview}</div>
+      </div>
+      ${c.unread ? `<div class="badge">${c.unread}</div>` : ''}
+    </div>
+  `).join("");
+}
+
+/* ================= CHAT WINDOW ================= */
+function openChatFor(ride, chatId){
+  if(chatId){
+    currentChat = chats.find(c=>c.id===chatId);
+  } else if(ride){
+    currentChat = chats.find(c=>c.name===ride.driver) || {
+      id: 99, name: ride.driver, initials: ride.initials, time:"сейчас", preview:"", unread:0,
+      messages:[{from:"them", text:"Здравствуйте! Готов ответить на вопросы по поездке.", time:"сейчас"}]
+    };
+    if(!chats.find(c=>c.id===currentChat.id)) chats.unshift(currentChat);
+  }
+  document.getElementById('cw-name').textContent = currentChat.name;
+  renderMessages();
+  goTo('screen-chat-window');
+}
+
+function renderMessages(){
+  const el = document.getElementById('cw-messages');
+  el.innerHTML = currentChat.messages.map(m => `
+    <div class="msg ${m.from==='me'?'me':'them'}">
+      ${m.text}
+      <div class="msg-time">${m.time}</div>
+    </div>
+  `).join("");
+  el.scrollTop = el.scrollHeight;
+}
+
+function sendMsg(){
+  const input = document.getElementById('cw-input');
+  const text = input.value.trim();
+  if(!text) return;
+  currentChat.messages.push({from:"me", text, time:"сейчас"});
+  input.value = "";
+  renderMessages();
+  setTimeout(()=>{
+    currentChat.messages.push({from:"them", text:"Хорошо, договорились 👍", time:"сейчас"});
+    renderMessages();
+  }, 900);
+}
+
+/* ================= DRIVERS BY CITY ================= */
+function renderDriversByCity(){
+  const el = document.getElementById('drivers-list');
+  const groups = {};
+  rides.forEach(r=>{
+    const city = r.stops[0].city;
+    (groups[city] = groups[city] || []).push(r);
+  });
+  el.innerHTML = Object.keys(groups).map(city => `
+    <div class="city-group">
+      <div class="city-heading">📍 ${city} <span class="count">· ${groups[city].length} ${groups[city].length===1?'водитель':'водителя'}</span></div>
+      ${groups[city].map(r => `
+        <div class="driver-row" onclick="openRide(${r.id})">
+          <div class="avatar">${r.initials}</div>
+          <div class="driver-row-text">
+            <b>${r.driver}</b>
+            <span>${r.rating} · до ${r.stops[r.stops.length-1].city}, ${r.stops[0].time}</span>
+          </div>
+          <div class="driver-row-arrow">›</div>
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
+}
+
+/* ================= PROFILE MODE ================= */
+function setMode(mode){
+  document.getElementById('mode-passenger').classList.toggle('active', mode==='passenger');
+  document.getElementById('mode-driver').classList.toggle('active', mode==='driver');
+  document.getElementById('profile-passenger-info').style.display = mode==='passenger' ? 'flex' : 'none';
+  document.getElementById('profile-driver-info').style.display = mode==='driver' ? 'flex' : 'none';
+  document.getElementById('profile-add-ride').style.display = mode==='driver' ? 'flex' : 'none';
+}
+
+/* ================= INIT ================= */
+renderResults();
+renderChatList();
+renderDriversByCity();
+refreshNavs();
+</script>
+</body>
+</html>
