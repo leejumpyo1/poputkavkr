@@ -441,6 +441,26 @@ const CITY_COORDS = {
 };
 function coordsFor(city){ return CITY_COORDS[city.trim()] || CITY_COORDS["Сеул"]; }
 
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function addMinutesToTime(timeStr, minutesToAdd){
+  const [h, m] = String(timeStr).split(":").map(n => parseInt(n,10) || 0);
+  let total = (h * 60 + m + minutesToAdd) % (24 * 60);
+  const nh = Math.floor(total / 60), nm = total % 60;
+  return (nh<10?'0':'') + nh + ':' + (nm<10?'0':'') + nm;
+}
+function estimateArrivalTime(depTime, fromLat, fromLng, toLat, toLng){
+  const distanceKm = haversineKm(fromLat, fromLng, toLat, toLng);
+  const minutes = Math.max(20, Math.round(distanceKm / 80 * 60));
+  return addMinutesToTime(depTime, minutes);
+}
+
 const CATEGORIES = [
   {id:"all", label:"Все"}, {id:"work", label:"💼 Работа"}, {id:"study", label:"🎓 Учёба"},
   {id:"airport", label:"✈️ Аэропорт"}, {id:"event", label:"🎤 Мероприятие"}
@@ -674,7 +694,7 @@ function renderDriversByCity(){
 }
 
 /* ================= CONTACT DRIVER VIA RELAY BOT ================= */
-const BOT_USERNAME = "poputka_relay_bot"; // замените на username вашего бота
+const BOT_USERNAME = "poputkavkoree_bot";
 
 function contactDriverViaBot(ride){
   const link = `https://t.me/${BOT_USERNAME}?start=ride_${ride.id}`;
@@ -806,7 +826,7 @@ function submitDriverOnboarding(){
     schedule: schedule,
     stops: [
       {city: fromCity, time: schedule.time, lat: fLat, lng: fLng, note: plate ? `Отправление · ${plate}` : "Ваше отправление"},
-      {city: toCity, time: schedule.time, lat: tLat, lng: tLng, note: "Ваше прибытие"}
+      {city: toCity, time: estimateArrivalTime(schedule.time, fLat, fLng, tLat, tLng), lat: tLat, lng: tLng, note: "Ваше прибытие"}
     ]
   });
   saveRideToBackend(rides[rides.length - 1]);
