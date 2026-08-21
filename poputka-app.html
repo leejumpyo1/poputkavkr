@@ -397,20 +397,21 @@ async function loadRidesFromBackend(){
     const res = await fetch(BACKEND_URL);
     const data = await res.json();
     if(data.rides && data.rides.length){
-      // серверные записи добавляем поверх демо-данных, без дублей по id
-      data.rides.forEach(r => {
-        if(!rides.find(x => String(x.id) === String(r.id))){
-          r.initials = (r.driver || "??").slice(0,2).toUpperCase();
-          r.rating = r.rating || "Новый водитель";
-          rides.push(r);
-        }
+      rides = data.rides.map(r => {
+        r.initials = (r.driver || "??").slice(0,2).toUpperCase();
+        r.rating = r.rating || "Новый водитель";
+        r.isDemo = false;
+        return r;
       });
-      renderResults();
-      renderDriversByCity();
+    } else {
+      rides = DEMO_RIDES; // таблица пока пустая — показываем демо для наглядности
     }
   } catch(err){
-    console.warn("Не удалось загрузить поездки с сервера:", err);
+    console.warn("Не удалось загрузить поездки с сервера, показываем демо:", err);
+    rides = DEMO_RIDES;
   }
+  renderResults();
+  renderDriversByCity();
 }
 
 async function saveRideToBackend(ride){
@@ -447,11 +448,11 @@ const CATEGORIES = [
 let activeCategory = "all";
 let activeCity = "all";
 
-const rides = [
+const DEMO_RIDES = [
   {
-    id: 1, driver: "Игорь", initials: "ИГ", rating: "4.9 · 132 поездки",
+    id: "demo-1", driver: "Игорь", initials: "ИГ", rating: "4.9 · 132 поездки",
     price: "35 000 ₩", seats: "2 места", category: "work", verified: true, phone: "+82 10-••••-5521",
-    schedule: {type:"daily", time:"08:00"},
+    schedule: {type:"daily", time:"08:00"}, isDemo: true,
     stops: [
       {city:"Сеул", time:"08:00", lat:37.5665, lng:126.9780, note:"Отправление, ст. Каннам"},
       {city:"Тэджон", time:"09:30", lat:36.3504, lng:127.3845, note:"Остановка 10 минут"},
@@ -460,9 +461,9 @@ const rides = [
     ]
   },
   {
-    id: 2, driver: "Марина", initials: "МК", rating: "5.0 · 58 поездок",
+    id: "demo-2", driver: "Марина", initials: "МК", rating: "5.0 · 58 поездок",
     price: "28 000 ₩", seats: "3 места", category: "airport", verified: true, phone: "+82 10-••••-8890",
-    schedule: {type:"once", date: new Date().toISOString().slice(0,10), time:"07:30"},
+    schedule: {type:"once", date: new Date().toISOString().slice(0,10), time:"07:30"}, isDemo: true,
     stops: [
       {city:"Инчхон", time:"07:30", lat:37.4563, lng:126.7052, note:"Отправление, ТЦ рядом с аэропортом"},
       {city:"Сеул", time:"08:15", lat:37.5665, lng:126.9780, note:"Короткая остановка"},
@@ -470,9 +471,9 @@ const rides = [
     ]
   },
   {
-    id: 3, driver: "Алексей", initials: "АЛ", rating: "4.7 · 210 поездок",
+    id: "demo-3", driver: "Алексей", initials: "АЛ", rating: "4.7 · 210 поездок",
     price: "22 000 ₩", seats: "1 место", category: "study", verified: false, phone: null,
-    schedule: {type:"once", date: new Date().toISOString().slice(0,10), time:"09:00"},
+    schedule: {type:"once", date: new Date().toISOString().slice(0,10), time:"09:00"}, isDemo: true,
     stops: [
       {city:"Сеул", time:"09:00", lat:37.5665, lng:126.9780, note:"Отправление, ст. Сынгнэ"},
       {city:"Чхонан", time:"10:00", lat:36.8151, lng:127.1139, note:"Остановка 5 минут"},
@@ -480,6 +481,8 @@ const rides = [
     ]
   }
 ];
+
+let rides = [];
 
 let currentRide = rides[0];
 let map, routeLayer;
@@ -564,7 +567,7 @@ function renderResults(){
             <div class="avatar">${r.initials}</div>
             <div>
               <div class="driver-name">${r.driver}${r.verified ? '<span class="verified">✓</span>' : ''}</div>
-              <div class="rating">${r.rating}</div>
+              <div class="rating">${r.rating}${r.isDemo ? ' · демо' : ''}</div>
             </div>
           </div>
         </div>
@@ -657,7 +660,7 @@ function renderDriversByCity(){
           <div class="avatar">${r.initials}</div>
           <div class="driver-row-text">
             <b>${r.driver}${r.verified ? '<span class="verified">✓</span>' : ''}</b>
-            <span>${r.rating} · до ${r.stops[r.stops.length-1].city} · ${scheduleLabel(r)}</span>
+            <span>${r.rating} · до ${r.stops[r.stops.length-1].city} · ${scheduleLabel(r)}${r.isDemo ? ' · демо' : ''}</span>
           </div>
           <div class="driver-row-arrow">›</div>
         </div>
@@ -715,14 +718,21 @@ function requestPhoneVerification(){
   statusEl.textContent = "Ожидаем подтверждения…";
   statusEl.style.color = "var(--ink-soft)";
 
-  tg.requestContact(function(sent){
+  tg.requestContact(function(sent, event){
     if(!sent){
       statusEl.textContent = "Вы отменили подтверждение номера";
       statusEl.style.color = "var(--red)";
       return;
     }
-    // На бэкенде здесь нужно проверить hash из responseUnsafe против токена бота.
-    verifiedPhone = "+821012345678"; // демо-заглушка для показа маскировки
+    const contact = event && event.responseUnsafe && event.responseUnsafe.contact;
+    if(!contact || !contact.phone_number){
+      statusEl.textContent = "Не удалось получить номер, попробуйте ещё раз";
+      statusEl.style.color = "var(--red)";
+      return;
+    }
+    // На бэкенде здесь нужно проверить hash из event.responseUnsafe против токена бота,
+    // чтобы убедиться, что номер не подделан на клиенте.
+    verifiedPhone = contact.phone_number.startsWith('+') ? contact.phone_number : '+' + contact.phone_number;
     statusEl.innerHTML = `✅ Номер подтверждён: <b>${maskPhone(verifiedPhone)}</b>`;
     statusEl.style.color = "var(--blue)";
     btn.textContent = "📱 Номер подтверждён";
@@ -784,7 +794,7 @@ function submitDriverOnboarding(){
   const initials = name.slice(0,2).toUpperCase();
   const [fLat,fLng] = coordsFor(fromCity);
   const [tLat,tLng] = coordsFor(toCity);
-  const newId = Math.max(...rides.map(r=>r.id)) + 1;
+  const newId = Date.now();
 
   rides.push({
     id: newId, driver: name, initials: initials, rating: "Новый водитель",
