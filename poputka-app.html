@@ -389,6 +389,47 @@
 </div>
 
 <script>
+/* ================= BACKEND (Google Apps Script + Sheets) ================= */
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxpTCCx1xVv4UPcZVFDDkkFucjTcarMf9uOzGK58s2DVrqroF5mrSS9O0iW-xlf1hNk/exec";
+
+async function loadRidesFromBackend(){
+  try{
+    const res = await fetch(BACKEND_URL);
+    const data = await res.json();
+    if(data.rides && data.rides.length){
+      // серверные записи добавляем поверх демо-данных, без дублей по id
+      data.rides.forEach(r => {
+        if(!rides.find(x => String(x.id) === String(r.id))){
+          r.initials = (r.driver || "??").slice(0,2).toUpperCase();
+          r.rating = r.rating || "Новый водитель";
+          rides.push(r);
+        }
+      });
+      renderResults();
+      renderDriversByCity();
+    }
+  } catch(err){
+    console.warn("Не удалось загрузить поездки с сервера:", err);
+  }
+}
+
+async function saveRideToBackend(ride){
+  try{
+    await fetch(BACKEND_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        driver: ride.driver, phone: ride.phone, plate: ride.plate,
+        category: ride.category, verified: ride.verified,
+        schedule: ride.schedule, price: ride.price, seats: ride.seats,
+        fromCity: ride.stops[0].city, fromLat: ride.stops[0].lat, fromLng: ride.stops[0].lng,
+        toCity: ride.stops[1].city, toLat: ride.stops[1].lat, toLng: ride.stops[1].lng
+      })
+    });
+  } catch(err){
+    console.warn("Не удалось сохранить поездку на сервере:", err);
+  }
+}
+
 /* ================= DATA ================= */
 const KOREAN_CITIES = ["Сеул","Пусан","Инчхон","Тэгу","Тэджон","Кванджу","Ульсан","Сувон","Чхонан","Чеджу"];
 const CITY_COORDS = {
@@ -751,12 +792,14 @@ function submitDriverOnboarding(){
     seats: `${seats} мест${seats==1?'о':' '}`.trim(),
     category: category, verified: !!verifiedPhone,
     phone: verifiedPhone ? maskPhone(verifiedPhone) : null,
+    plate: plate,
     schedule: schedule,
     stops: [
       {city: fromCity, time: schedule.time, lat: fLat, lng: fLng, note: plate ? `Отправление · ${plate}` : "Ваше отправление"},
       {city: toCity, time: schedule.time, lat: tLat, lng: tLng, note: "Ваше прибытие"}
     ]
   });
+  saveRideToBackend(rides[rides.length - 1]);
 
   document.getElementById('profile-display-name').textContent = name;
   document.getElementById('profile-avatar-initials').textContent = initials;
@@ -779,6 +822,7 @@ renderDriversByCity();
 renderFilterChips();
 renderCityChips();
 refreshNavs();
+loadRidesFromBackend();
 (function setDefaultDates(){
   const today = new Date().toISOString().slice(0,10);
   ['date-input','ob-driver-date'].forEach(id=>{
