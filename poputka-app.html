@@ -420,7 +420,7 @@ async function saveRideToBackend(ride){
       method: "POST",
       body: JSON.stringify({
         driver: ride.driver, phone: ride.phone, plate: ride.plate,
-        category: ride.category, verified: ride.verified,
+        category: ride.category, verified: ride.verified, driverTgId: ride.driverTgId,
         schedule: ride.schedule, price: ride.price, seats: ride.seats,
         fromCity: ride.stops[0].city, fromLat: ride.stops[0].lat, fromLng: ride.stops[0].lng,
         toCity: ride.stops[1].city, toLat: ride.stops[1].lat, toLng: ride.stops[1].lng
@@ -815,6 +815,10 @@ function submitDriverOnboarding(){
   const [fLat,fLng] = coordsFor(fromCity);
   const [tLat,tLng] = coordsFor(toCity);
   const newId = Date.now();
+  const tgApp = window.Telegram && window.Telegram.WebApp;
+  const driverTgId = tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user
+    ? tgApp.initDataUnsafe.user.id
+    : null;
 
   rides.push({
     id: newId, driver: name, initials: initials, rating: "Новый водитель",
@@ -822,7 +826,7 @@ function submitDriverOnboarding(){
     seats: `${seats} мест${seats==1?'о':' '}`.trim(),
     category: category, verified: !!verifiedPhone,
     phone: verifiedPhone ? maskPhone(verifiedPhone) : null,
-    plate: plate,
+    plate: plate, driverTgId: driverTgId,
     schedule: schedule,
     stops: [
       {city: fromCity, time: schedule.time, lat: fLat, lng: fLng, note: plate ? `Отправление · ${plate}` : "Ваше отправление"},

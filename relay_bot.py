@@ -25,6 +25,8 @@ import asyncio
 import logging
 import os
 import sqlite3
+import json
+import urllib.request
 from contextlib import closing
 
 from aiogram import Bot, Dispatcher, F
@@ -34,6 +36,11 @@ from aiogram.types import Message
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
+# Тот же URL, что вписан в poputka-app.html как BACKEND_URL
+BACKEND_URL = os.environ.get(
+    "BACKEND_URL",
+    "https://script.google.com/macros/s/AKfycbzRGzgWzuorn3glsEnCYi1XeSqDjIBTo-kxAhlmjfAdeyXk86z8AQChZoWG2BkibB6V/exec"
+)
 DB_PATH = "poputka_chats.db"
 
 bot = Bot(token=BOT_TOKEN)
@@ -45,15 +52,8 @@ dp = Dispatcher()
 def db_init() -> None:
     with closing(sqlite3.connect(DB_PATH)) as con:
         con.execute("""
-            CREATE TABLE IF NOT EXISTS rides (
-                ride_id     INTEGER PRIMARY KEY,
-                driver_id   INTEGER NOT NULL,
-                route       TEXT
-            )
-        """)
-        con.execute("""
             CREATE TABLE IF NOT EXISTS ride_chats (
-                ride_id      INTEGER NOT NULL,
+                ride_id      TEXT NOT NULL,
                 passenger_id INTEGER NOT NULL,
                 driver_id    INTEGER NOT NULL,
                 active       INTEGER NOT NULL DEFAULT 1,
@@ -63,20 +63,20 @@ def db_init() -> None:
         con.commit()
 
 
-def upsert_ride(ride_id: int, driver_id: int, route: str = "") -> None:
-    with closing(sqlite3.connect(DB_PATH)) as con:
-        con.execute(
-            "INSERT INTO rides (ride_id, driver_id, route) VALUES (?, ?, ?) "
-            "ON CONFLICT(ride_id) DO UPDATE SET driver_id=excluded.driver_id, route=excluded.route",
-            (ride_id, driver_id, route),
-        )
-        con.commit()
+def get_driver_for_ride(ride_id: str) -> int | None:
+    """Спрашивает у Google Apps Script backend, кто водитель этой поездки."""
+    try:
+        with urllib.request.urlopen(BACKEND_URL, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        logging.warning("Не удалось получить данные с бэкенда: %s", e)
+        return None
 
-
-def get_driver_for_ride(ride_id: int) -> int | None:
-    with closing(sqlite3.connect(DB_PATH)) as con:
-        row = con.execute("SELECT driver_id FROM rides WHERE ride_id=?", (ride_id,)).fetchone()
-        return row[0] if row else None
+    for ride in data.get("rides", []):
+        if str(ride.get("id")) == str(ride_id):
+            driver_id = ride.get("driverTgId")
+            return int(driver_id) if driver_id else None
+    return None
 
 
 def open_chat(ride_id: int, passenger_id: int, driver_id: int) -> None:
@@ -138,7 +138,7 @@ async def handle_start_with_ride(message: Message, command: CommandObject):
         await message.answer("Открой чат из мини-приложения кнопкой «Написать водителю».")
         return
 
-    ride_id = int(payload.removeprefix("ride_"))
+    ride_id = payload.removeprefix("ride_")
     driver_id = get_driver_for_ride(ride_id)
 
     if driver_id is None:
